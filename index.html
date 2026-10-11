@@ -116,6 +116,12 @@ textarea{min-height:64px;resize:vertical}
 .collapse-body{padding:0 12px 12px}
 /* data tab */
 .kv{font-size:.85rem;color:var(--muted);margin:6px 0}
+/* USDA search */
+.usda-item{border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-top:6px;cursor:pointer;background:#fff}
+.usda-item:active{background:var(--chip)}
+.usda-item .sub{font-size:.82rem;color:var(--muted)}
+.checkrow{display:flex;align-items:center;gap:8px;font-size:.92rem;color:var(--ink);margin:12px 0 0}
+.checkrow input{width:19px;height:19px;flex:0 0 auto}
 footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24px}
 </style>
 </head>
@@ -164,6 +170,14 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
       <div class="collapse-body" id="entryBody" style="display:none">
       <form id="entryForm" autocomplete="off">
         <input type="hidden" id="editId" value="">
+        <label for="fUsdaSearch">Search USDA foods</label>
+        <input type="text" id="fUsdaSearch" placeholder="Search USDA foods…" autocomplete="off">
+        <div class="muted" id="usdaHint" style="margin-top:4px">Using the shared demo key — searches are limited. Add your free key in the Backup tab.</div>
+        <div id="usdaResults"></div>
+        <div id="usdaPortionWrap" style="display:none">
+          <label for="fUsdaPortion">Portion</label>
+          <select id="fUsdaPortion"></select>
+        </div>
         <label for="fLib">From food library</label>
         <select id="fLib"><option value="">— choose a saved food —</option></select>
         <label for="fName">Name</label>
@@ -192,6 +206,7 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
             <div><label for="fWater">Water (oz)</label><input type="number" id="fWater" step="any" min="0" inputmode="decimal" value="0"></div>
           </div>
         </div>
+        <label class="checkrow"><input type="checkbox" id="fSaveLib"> Also save to my Foods library</label>
         <div class="btnrow">
           <button type="submit" class="btn" id="entrySubmit">Add entry</button>
           <button type="button" class="btn secondary" id="entryCancel" style="display:none">Cancel</button>
@@ -305,6 +320,15 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
       <label for="importFile" style="margin-top:16px">Import data from a JSON file</label>
       <input type="file" id="importFile" accept="application/json,.json">
       <div class="kv" id="dataInfo"></div>
+    </div>
+    <h2>USDA food search</h2>
+    <div class="card">
+      <p class="muted">The Add entry form can search the USDA FoodData Central database and fill in the nutrients for you. Search needs an internet connection; everything else in the app works offline. A free personal API key makes search fast and reliable — without one, the app uses a shared demo key that is heavily rate-limited.</p>
+      <label for="usdaKey">Your USDA API key</label>
+      <input type="password" id="usdaKey" placeholder="Paste your free API key" autocomplete="off">
+      <button class="btn" id="usdaKeySave">Save key</button>
+      <div class="kv" id="usdaKeyStatus"></div>
+      <p class="muted">Get a free key at <a href="https://fdc.nal.usda.gov/api-key-signup" target="_blank" rel="noopener">fdc.nal.usda.gov/api-key-signup</a>. Your key is stored only on this device and is never included in backup exports.</p>
     </div>
     <div class="card">
       <h3 style="margin-top:0">Danger zone</h3>
@@ -510,11 +534,29 @@ $("entryHead").addEventListener("click", function () {
 function fmtServings(sv) {
   return String(Math.round(sv * 1000) / 1000);
 }
+var lastEntryBase = null; // pre-servings snapshot from readEntryForm, used by save-to-library
 function readEntryForm() {
   var sv = num($("fServings").value);
   if (!(sv > 0)) sv = 1;
   function m(v) { return Math.round(num(v) * sv * 100) / 100; }
   var qty = $("fQty").value.trim();
+  lastEntryBase = {
+    name: $("fName").value.trim(),
+    quantity: qty,
+    calories: num($("fCalories").value),
+    total_fat_g: num($("fFat").value),
+    saturated_fat_g: num($("fSatFat").value),
+    protein_g: num($("fProtein").value),
+    sodium_mg: num($("fSodium").value),
+    carbs_g: num($("fCarbs").value),
+    fiber_g: num($("fFiber").value),
+    total_sugar_g: num($("fSugar").value),
+    natural_sugar_g: num($("fNatSugar").value),
+    added_sugar_g: num($("fAddSugar").value),
+    caffeine_mg: num($("fCaffeine").value),
+    alcohol_g: num($("fAlcohol").value),
+    water_oz: num($("fWater").value)
+  };
   if (sv !== 1) qty = qty ? qty + " × " + fmtServings(sv) : "× " + fmtServings(sv);
   return {
     log_date: selectedDate,
@@ -540,6 +582,10 @@ function readEntryForm() {
 function clearEntryForm() {
   $("editId").value = "";
   $("fLib").selectedIndex = 0;
+  clearUsdaState();
+  $("fUsdaSearch").value = "";
+  $("usdaResults").innerHTML = "";
+  $("fSaveLib").checked = false;
   ["fName","fQty"].forEach(function (id) { $(id).value = ""; });
   $("fServings").value = "1";
   ["fCalories","fFat","fSatFat","fProtein","fFiber","fSodium","fCarbs","fSugar","fNatSugar","fAddSugar",
@@ -568,6 +614,15 @@ $("entryForm").addEventListener("submit", function (ev) {
     entries.push(data);
   }
   persistEntries();
+  if ($("fSaveLib").checked && lastEntryBase && lastEntryBase.name) {
+    var libItem = { entry_type: "food" };
+    for (var lk in lastEntryBase) libItem[lk] = lastEntryBase[lk];
+    libItem.id = uid();
+    libItem.created_at = Date.now();
+    libItem.updated_at = Date.now();
+    foodLib.push(libItem);
+    persistFoodLib();
+  }
   clearEntryForm();
   setEntryOpen(false);
   renderAll();
@@ -577,6 +632,10 @@ function startEdit(id) {
   for (var i = 0; i < entries.length; i++) if (entries[i].id === id) e = entries[i];
   if (!e) return;
   $("editId").value = e.id;
+  clearUsdaState();
+  $("fUsdaSearch").value = "";
+  $("usdaResults").innerHTML = "";
+  $("fSaveLib").checked = false;
   $("fName").value = e.name || "";
   $("fQty").value = e.quantity || "";
   $("fCalories").value = e.calories || 0;
@@ -813,6 +872,194 @@ function autofillFromLibrary(id) {
   $("fWater").value = f.water_oz || 0;
 }
 $("fLib").addEventListener("change", function () { autofillFromLibrary($("fLib").value); });
+
+/* ===== USDA FoodData Central search ===== */
+var LS_USDA_KEY = "nwt_usda_key_v1";
+var usdaState = null;   // { kind: "generic"|"branded", name, base, portions } while a USDA food fills the form
+var usdaReqSeq = 0;     // bumped per request so stale responses are ignored
+var usdaTimer = null;
+
+function usdaStoredKey() {
+  var k = loadJSON(LS_USDA_KEY, "");
+  return (typeof k === "string") ? k.trim() : "";
+}
+function usdaEffectiveKey() { return usdaStoredKey() || "DEMO_KEY"; }
+function renderUsdaKeyUI() {
+  var has = !!usdaStoredKey();
+  var st = $("usdaKeyStatus");
+  if (st) st.textContent = has
+    ? "A personal key is saved on this device. Paste a new key and tap Save to replace it, or Save an empty box to remove it."
+    : "No personal key saved \u2014 search is using the shared demo key (very limited).";
+  var hint = $("usdaHint");
+  if (hint) hint.style.display = has ? "none" : "block";
+}
+$("usdaKeySave").addEventListener("click", function () {
+  saveJSON(LS_USDA_KEY, $("usdaKey").value.trim());
+  $("usdaKey").value = "";
+  renderUsdaKeyUI();
+});
+function clearUsdaState() {
+  usdaState = null;
+  var wrap = $("usdaPortionWrap");
+  if (wrap) wrap.style.display = "none";
+  var sel = $("fUsdaPortion");
+  if (sel) sel.innerHTML = "";
+}
+function usdaMsg(text) {
+  $("usdaResults").innerHTML = '<div class="muted" style="margin-top:6px">' + esc(text) + "</div>";
+}
+$("fUsdaSearch").addEventListener("input", function () {
+  var q = $("fUsdaSearch").value.trim();
+  if (usdaTimer) { clearTimeout(usdaTimer); usdaTimer = null; }
+  if (q.length < 3) { $("usdaResults").innerHTML = ""; return; }
+  usdaTimer = setTimeout(function () { runUsdaSearch(q); }, 350);
+});
+function runUsdaSearch(q) {
+  var seq = ++usdaReqSeq;
+  $("usdaResults").innerHTML = '<div class="muted" style="margin-top:6px">Searching USDA\u2026</div>';
+  var url = "https://api.nal.usda.gov/fdc/v1/foods/search?api_key=" +
+    encodeURIComponent(usdaEffectiveKey()) + "&query=" + encodeURIComponent(q) +
+    "&pageSize=10&dataType=" + encodeURIComponent("Foundation,SR Legacy,Survey,Branded");
+  fetch(url).then(function (res) {
+    if (seq !== usdaReqSeq) return null;
+    if (res.status === 429) { usdaMsg("USDA rate limit reached \u2014 wait a bit, or add your own free key in the Backup tab."); return null; }
+    if (!res.ok) { usdaMsg("USDA search unavailable \u2014 check your connection. Your library and logs still work."); return null; }
+    return res.json();
+  }).then(function (data) {
+    if (!data || seq !== usdaReqSeq) return;
+    renderUsdaResults(data.foods || []);
+  }).catch(function () {
+    if (seq !== usdaReqSeq) return;
+    usdaMsg("USDA search unavailable \u2014 check your connection. Your library and logs still work.");
+  });
+}
+function renderUsdaResults(foods) {
+  if (!foods.length) { usdaMsg("No USDA matches for that \u2014 try different words."); return; }
+  var html = "";
+  foods.slice(0, 10).forEach(function (f) {
+    html += '<div class="usda-item" data-fdc="' + esc(f.fdcId) + '">' +
+      '<div style="font-weight:600">' + esc(f.description) + "</div>" +
+      '<div class="sub">' + (f.brandName ? esc(f.brandName) + " \u00B7 " : "") +
+      esc(f.dataType || "") + "</div></div>";
+  });
+  $("usdaResults").innerHTML = html;
+  Array.prototype.forEach.call($("usdaResults").querySelectorAll("[data-fdc]"), function (el) {
+    el.addEventListener("click", function () { usdaSelect(el.getAttribute("data-fdc")); });
+  });
+}
+function usdaSelect(fdcId) {
+  var seq = ++usdaReqSeq;
+  $("usdaResults").innerHTML = '<div class="muted" style="margin-top:6px">Loading food details\u2026</div>';
+  var url = "https://api.nal.usda.gov/fdc/v1/food/" + encodeURIComponent(fdcId) +
+    "?api_key=" + encodeURIComponent(usdaEffectiveKey());
+  fetch(url).then(function (res) {
+    if (seq !== usdaReqSeq) return null;
+    if (res.status === 429) { usdaMsg("USDA rate limit reached \u2014 wait a bit, or add your own free key in the Backup tab."); return null; }
+    if (!res.ok) { usdaMsg("USDA search unavailable \u2014 check your connection. Your library and logs still work."); return null; }
+    return res.json();
+  }).then(function (detail) {
+    if (!detail || seq !== usdaReqSeq) return;
+    fillFromUsda(detail);
+  }).catch(function () {
+    if (seq !== usdaReqSeq) return;
+    usdaMsg("USDA search unavailable \u2014 check your connection. Your library and logs still work.");
+  });
+}
+var USDA_FORM_IDS = {
+  calories: "fCalories", total_fat_g: "fFat", saturated_fat_g: "fSatFat",
+  protein_g: "fProtein", sodium_mg: "fSodium", carbs_g: "fCarbs",
+  fiber_g: "fFiber", total_sugar_g: "fSugar", natural_sugar_g: "fNatSugar",
+  added_sugar_g: "fAddSugar", caffeine_mg: "fCaffeine", alcohol_g: "fAlcohol",
+  water_oz: "fWater"
+};
+function setEntryNutrients(vals, factor) {
+  for (var k in USDA_FORM_IDS) {
+    $(USDA_FORM_IDS[k]).value = Math.round(num(vals[k]) * factor * 100) / 100;
+  }
+}
+function usdaDetailNutrients(detail) {
+  var byId = {};
+  (detail.foodNutrients || []).forEach(function (n) {
+    if (n && n.nutrient && n.nutrient.id != null && n.amount != null) byId[n.nutrient.id] = num(n.amount);
+  });
+  function pick(ids) {
+    for (var i = 0; i < ids.length; i++) if (byId[ids[i]] != null) return byId[ids[i]];
+    return 0;
+  }
+  return {
+    calories: pick([1008, 2047, 2048]),
+    protein_g: pick([1003]),
+    total_fat_g: pick([1004]),
+    saturated_fat_g: pick([1258]),
+    carbs_g: pick([1005]),
+    fiber_g: pick([1079]),
+    total_sugar_g: pick([1063]),
+    natural_sugar_g: 0,
+    added_sugar_g: pick([1235]),
+    sodium_mg: pick([1093]),
+    caffeine_mg: pick([1057]),
+    alcohol_g: pick([1018]),
+    water_oz: 0
+  };
+}
+function usdaPortionLabel(p) {
+  var unit = (p.measureUnit && p.measureUnit.name) || "";
+  if (unit === "undetermined") unit = "";
+  var desc = p.portionDescription || p.modifier || "";
+  var amt = (p.amount != null) ? fmt(p.amount) : "1";
+  if (unit && desc) return amt + " " + unit + ", " + desc;
+  if (unit) return amt + " " + unit;
+  if (desc) return amt + " " + desc;
+  return fmt(p.gramWeight) + " g";
+}
+function fillFromUsda(detail) {
+  var name = detail.description || "";
+  $("fName").value = name;
+  $("fServings").value = "1";
+  $("usdaResults").innerHTML = "";
+  if (detail.dataType === "Branded" && detail.labelNutrients) {
+    var ln = detail.labelNutrients;
+    function lv(k) { return (ln[k] && ln[k].value != null) ? num(ln[k].value) : 0; }
+    var vals = {
+      calories: lv("calories"), total_fat_g: lv("fat"), saturated_fat_g: lv("saturatedFat"),
+      protein_g: lv("protein"), sodium_mg: lv("sodium"), carbs_g: lv("carbohydrates"),
+      fiber_g: lv("fiber"), total_sugar_g: lv("sugars"), natural_sugar_g: 0,
+      added_sugar_g: 0, caffeine_mg: lv("caffeine"), alcohol_g: 0, water_oz: 0
+    };
+    clearUsdaState();
+    usdaState = { kind: "branded", name: name, base: vals };
+    setEntryNutrients(vals, 1);
+    $("fQty").value = detail.householdServingFullText ||
+      ((detail.servingSize != null) ? (fmt(detail.servingSize) + " " + (detail.servingSizeUnit || "")).trim() : "");
+  } else {
+    var base = usdaDetailNutrients(detail);
+    var portions = [];
+    (detail.foodPortions || []).forEach(function (p) {
+      if (p && num(p.gramWeight) > 0) {
+        portions.push({ label: usdaPortionLabel(p) + " (" + fmt(p.gramWeight) + " g)", grams: num(p.gramWeight) });
+      }
+    });
+    portions.push({ label: "100 g", grams: 100 });
+    usdaState = { kind: "generic", name: name, base: base, portions: portions };
+    var sel = $("fUsdaPortion");
+    sel.innerHTML = portions.map(function (p, i) {
+      return '<option value="' + i + '">' + esc(p.label) + "</option>";
+    }).join("");
+    sel.selectedIndex = 0;
+    $("usdaPortionWrap").style.display = "block";
+    applyUsdaPortion();
+  }
+}
+function applyUsdaPortion() {
+  if (!usdaState || usdaState.kind !== "generic") return;
+  var idx = parseInt($("fUsdaPortion").value, 10);
+  if (isNaN(idx) || !usdaState.portions[idx]) idx = 0;
+  var p = usdaState.portions[idx];
+  setEntryNutrients(usdaState.base, p.grams / 100);
+  $("fQty").value = p.label;
+}
+$("fUsdaPortion").addEventListener("change", applyUsdaPortion);
+renderUsdaKeyUI();
 
 /* ===== quick add water ===== */
 $("addWaterBtn").addEventListener("click", function () {
