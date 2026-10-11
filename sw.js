@@ -1,4 +1,4 @@
-const CACHE = "nutrition-tracker-v3";
+const CACHE = "nutrition-tracker-v4";
 const CORE = ["./", "./index.html", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png"];
 self.addEventListener("install", (e) => {
@@ -11,6 +11,7 @@ self.addEventListener("activate", (e) => {
 });
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then((hit) => hit ||
       fetch(e.request).then((res) => {
