@@ -106,6 +106,14 @@ textarea{min-height:64px;resize:vertical}
 .modalback.show{display:flex}
 .modal{background:#fff;border-radius:14px;padding:18px;max-width:420px;width:100%}
 .modal h2{margin-top:0}
+/* collapsible cards */
+.card.collapse{padding:0;overflow:hidden}
+.collapse-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  width:100%;padding:12px;background:none;border:none;cursor:pointer;text-align:left;
+  font-family:inherit;font-size:1.05rem;font-weight:700;color:var(--ink)}
+.collapse-head .chev{flex:0 0 auto;color:var(--muted);font-size:.9rem;transition:transform .15s ease}
+.collapse.open .collapse-head .chev{transform:rotate(90deg)}
+.collapse-body{padding:0 12px 12px}
 /* data tab */
 .kv{font-size:.85rem;color:var(--muted);margin:6px 0}
 footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24px}
@@ -131,7 +139,7 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
   <div class="tabs">
     <button class="tab active" data-tab="log">Daily Log</button>
     <button class="tab" data-tab="foods">Foods</button>
-    <button class="tab" data-tab="weight">Weight</button>
+    <button class="tab" data-tab="trends">Trends</button>
     <button class="tab" data-tab="data">Backup</button>
   </div>
 
@@ -142,33 +150,29 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
     <h2>Daily totals</h2>
     <div class="card"><div class="totals" id="dailyTotals"></div></div>
 
-    <h3>Quick add water</h3>
-    <div class="card">
-      <div class="waterrow">
-        <div style="flex:1">
-          <label for="waterOz">Amount (oz)</label>
-          <input type="number" id="waterOz" value="8" min="0" step="any" inputmode="decimal">
-        </div>
-        <button class="btn" id="addWaterBtn" style="width:auto;margin-top:0;padding:12px 18px">Add water</button>
-      </div>
+    <div class="card collapse" id="weighInCard">
+      <button type="button" class="collapse-head" id="weighInHead">
+        <span id="weighInTitle">Weigh-in</span><span class="chev">&#9656;</span>
+      </button>
+      <div class="collapse-body" id="weighInBody" style="display:none"></div>
     </div>
 
-    <h2 id="entryFormTitle">Add entry</h2>
-    <div class="card">
+    <div class="card collapse" id="entryCard">
+      <button type="button" class="collapse-head" id="entryHead">
+        <span id="entryFormTitle">Add entry</span><span class="chev">&#9656;</span>
+      </button>
+      <div class="collapse-body" id="entryBody" style="display:none">
       <form id="entryForm" autocomplete="off">
         <input type="hidden" id="editId" value="">
-        <label>Type</label>
-        <div class="seg" id="typeSeg">
-          <button type="button" data-type="food" class="on">Food</button>
-          <button type="button" data-type="beverage">Beverage</button>
-        </div>
         <label for="fLib">From food library</label>
         <select id="fLib"><option value="">— choose a saved food —</option></select>
         <label for="fName">Name</label>
         <input type="text" id="fName" list="savedItems" placeholder="e.g. Grilled chicken" required>
         <datalist id="savedItems"></datalist>
-        <label for="fQty">Quantity</label>
-        <input type="text" id="fQty" placeholder="e.g. 1 cup, 2 slices">
+        <div class="fgrid">
+          <div><label for="fQty">Quantity</label><input type="text" id="fQty" placeholder="e.g. 1 cup, 2 slices"></div>
+          <div><label for="fServings">Servings</label><input type="number" id="fServings" step="any" min="0" inputmode="decimal" value="1"></div>
+        </div>
         <div class="fgrid">
           <div><label for="fCalories">Calories (kcal)</label><input type="number" id="fCalories" step="any" min="0" inputmode="decimal" value="0"></div>
           <div><label for="fFat">Total fat (g)</label><input type="number" id="fFat" step="any" min="0" inputmode="decimal" value="0"></div>
@@ -181,7 +185,7 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
           <div><label for="fNatSugar">Natural sugar (g)</label><input type="number" id="fNatSugar" step="any" min="0" inputmode="decimal" value="0"></div>
           <div><label for="fAddSugar">Added sugar (g)</label><input type="number" id="fAddSugar" step="any" min="0" inputmode="decimal" value="0"></div>
         </div>
-        <div id="bevFields" style="display:none">
+        <div id="bevFields">
           <div class="fgrid3">
             <div><label for="fCaffeine">Caffeine (mg)</label><input type="number" id="fCaffeine" step="any" min="0" inputmode="decimal" value="0"></div>
             <div><label for="fAlcohol">Alcohol (g)</label><input type="number" id="fAlcohol" step="any" min="0" inputmode="decimal" value="0"></div>
@@ -193,6 +197,18 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
           <button type="button" class="btn secondary" id="entryCancel" style="display:none">Cancel</button>
         </div>
       </form>
+      </div>
+    </div>
+
+    <h3>Quick add water</h3>
+    <div class="card">
+      <div class="waterrow">
+        <div style="flex:1">
+          <label for="waterOz">Amount (oz)</label>
+          <input type="number" id="waterOz" value="8" min="0" step="any" inputmode="decimal">
+        </div>
+        <button class="btn" id="addWaterBtn" style="width:auto;margin-top:0;padding:12px 18px">Add water</button>
+      </div>
     </div>
   </div>
 
@@ -204,11 +220,6 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
     <div class="card">
       <form id="foodForm" autocomplete="off">
         <input type="hidden" id="foodEditId" value="">
-        <label>Type</label>
-        <div class="seg" id="foodTypeSeg">
-          <button type="button" data-type="food" class="on">Food</button>
-          <button type="button" data-type="beverage">Beverage</button>
-        </div>
         <label for="foodName">Name</label>
         <input type="text" id="foodName" placeholder="e.g. Overnight oats" required>
         <label for="foodQty">Quantity</label>
@@ -225,7 +236,7 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
           <div><label for="gNatSugar">Natural sugar (g)</label><input type="number" id="gNatSugar" step="any" min="0" inputmode="decimal" value="0"></div>
           <div><label for="gAddSugar">Added sugar (g)</label><input type="number" id="gAddSugar" step="any" min="0" inputmode="decimal" value="0"></div>
         </div>
-        <div id="gBevFields" style="display:none">
+        <div id="gBevFields">
           <div class="fgrid3">
             <div><label for="gCaffeine">Caffeine (mg)</label><input type="number" id="gCaffeine" step="any" min="0" inputmode="decimal" value="0"></div>
             <div><label for="gAlcohol">Alcohol (g)</label><input type="number" id="gAlcohol" step="any" min="0" inputmode="decimal" value="0"></div>
@@ -240,11 +251,8 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
     </div>
   </div>
 
-  <div class="tabpane" id="pane-weight">
-    <h2>Weigh-in &mdash; <span id="wiDateLabel"></span></h2>
-    <div class="card" id="weighInCard"></div>
-
-    <h2>Trends</h2>
+  <div class="tabpane" id="pane-trends">
+    <h2>Weight trends</h2>
     <div class="card">
       <h3>Last 7 days</h3>
       <div id="chart7"></div>
@@ -254,6 +262,38 @@ footer.note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24p
       <h3>Last 30 days</h3>
       <div id="chart30"></div>
       <div class="statgrid" id="stats30"></div>
+    </div>
+    <div class="card">
+      <h3>Date range</h3>
+      <div class="fgrid">
+        <div><label for="wFrom">From</label><input type="date" id="wFrom"></div>
+        <div><label for="wTo">To</label><input type="date" id="wTo"></div>
+      </div>
+      <button class="btn" id="wRangeBtn">Show</button>
+      <div id="chartWRange" style="margin-top:10px"><div class="empty">Pick a date range and tap Show.</div></div>
+      <div class="statgrid" id="statsWRange"></div>
+    </div>
+
+    <h2>Food trends</h2>
+    <div class="card">
+      <h3>Last 7 days</h3>
+      <div id="chartF7"></div>
+      <div class="statgrid" id="statsF7"></div>
+    </div>
+    <div class="card">
+      <h3>Last 30 days</h3>
+      <div id="chartF30"></div>
+      <div class="statgrid" id="statsF30"></div>
+    </div>
+    <div class="card">
+      <h3>Date range</h3>
+      <div class="fgrid">
+        <div><label for="fFrom">From</label><input type="date" id="fFrom"></div>
+        <div><label for="fTo">To</label><input type="date" id="fTo"></div>
+      </div>
+      <button class="btn" id="fRangeBtn">Show</button>
+      <div id="chartFRange" style="margin-top:10px"><div class="empty">Pick a date range and tap Show.</div></div>
+      <div class="statgrid" id="statsFRange"></div>
     </div>
   </div>
 
@@ -377,7 +417,6 @@ function uid() {
 }
 
 var selectedDate = todayStr();
-var entryType = "food";
 
 /* ===== tabs ===== */
 document.querySelectorAll(".tab").forEach(function (btn) {
@@ -387,6 +426,7 @@ document.querySelectorAll(".tab").forEach(function (btn) {
     btn.classList.add("active");
     $("pane-" + btn.getAttribute("data-tab")).classList.add("active");
     if (btn.getAttribute("data-tab") === "data") renderDataInfo();
+    if (btn.getAttribute("data-tab") === "trends") renderTrends();
   });
 });
 
@@ -398,7 +438,6 @@ function renderDateNav() {
     : (selectedDate === addDaysISO(t, 1)) ? "Tomorrow" : prettyDate(selectedDate);
   $("dateSub").textContent = prettyDate(selectedDate) + "  \u00B7  " + selectedDate;
   $("logDateLabel").textContent = prettyDate(selectedDate);
-  $("wiDateLabel").textContent = prettyDate(selectedDate);
 }
 $("prevDay").addEventListener("click", function () { selectedDate = addDaysISO(selectedDate, -1); renderAll(); });
 $("nextDay").addEventListener("click", function () { selectedDate = addDaysISO(selectedDate, 1); renderAll(); });
@@ -415,11 +454,9 @@ function entryMacros(e) {
   bits.push("P " + fmt(e.protein_g || 0) + "g");
   bits.push("C " + fmt(e.carbs_g || 0) + "g");
   bits.push("F " + fmt(e.total_fat_g || 0) + "g");
-  if (e.entry_type === "beverage") {
-    if (num(e.water_oz)) bits.push(fmt(e.water_oz) + " oz water");
-    if (num(e.caffeine_mg)) bits.push(fmt(e.caffeine_mg) + " mg caffeine");
-    if (num(e.alcohol_g)) bits.push(fmt(e.alcohol_g) + "g alcohol");
-  }
+  if (num(e.water_oz)) bits.push(fmt(e.water_oz) + " oz water");
+  if (num(e.caffeine_mg)) bits.push(fmt(e.caffeine_mg) + " mg caffeine");
+  if (num(e.alcohol_g)) bits.push(fmt(e.alcohol_g) + "g alcohol");
   return bits.join("  \u00B7  ");
 }
 function renderLog() {
@@ -430,9 +467,7 @@ function renderLog() {
   } else {
     list.forEach(function (e) {
       html += '<div class="entry">' +
-        '<div><div class="nm">' + esc(e.name) +
-        '<span class="badge' + (e.entry_type === "beverage" ? " bev" : "") + '">' +
-        (e.entry_type === "beverage" ? "drink" : "food") + "</span></div>" +
+        '<div><div class="nm">' + esc(e.name) + "</div>" +
         (e.quantity ? '<div class="qt">' + esc(e.quantity) + "</div>" : "") +
         '<div class="mac">' + esc(entryMacros(e)) + "</div></div>" +
         '<div class="acts">' +
@@ -465,44 +500,50 @@ function renderLog() {
 }
 
 /* ===== entry form ===== */
-function setEntryType(t) {
-  entryType = t;
-  Array.prototype.forEach.call($("typeSeg").querySelectorAll("button"), function (b) {
-    b.classList.toggle("on", b.getAttribute("data-type") === t);
-  });
-  $("bevFields").style.display = (t === "beverage") ? "block" : "none";
+function setEntryOpen(open) {
+  $("entryCard").classList.toggle("open", open);
+  $("entryBody").style.display = open ? "block" : "none";
 }
-Array.prototype.forEach.call($("typeSeg").querySelectorAll("button"), function (b) {
-  b.addEventListener("click", function () { setEntryType(b.getAttribute("data-type")); });
+$("entryHead").addEventListener("click", function () {
+  setEntryOpen($("entryBody").style.display === "none");
 });
+function fmtServings(sv) {
+  return String(Math.round(sv * 1000) / 1000);
+}
 function readEntryForm() {
+  var sv = num($("fServings").value);
+  if (!(sv > 0)) sv = 1;
+  function m(v) { return Math.round(num(v) * sv * 100) / 100; }
+  var qty = $("fQty").value.trim();
+  if (sv !== 1) qty = qty ? qty + " × " + fmtServings(sv) : "× " + fmtServings(sv);
   return {
     log_date: selectedDate,
-    entry_type: entryType,
+    entry_type: "food",
     name: $("fName").value.trim(),
-    quantity: $("fQty").value.trim(),
-    calories: num($("fCalories").value),
-    total_fat_g: num($("fFat").value),
-    saturated_fat_g: num($("fSatFat").value),
-    protein_g: num($("fProtein").value),
-    sodium_mg: num($("fSodium").value),
-    carbs_g: num($("fCarbs").value),
-    fiber_g: num($("fFiber").value),
-    total_sugar_g: num($("fSugar").value),
-    natural_sugar_g: num($("fNatSugar").value),
-    added_sugar_g: num($("fAddSugar").value),
-    caffeine_mg: num($("fCaffeine").value),
-    alcohol_g: num($("fAlcohol").value),
-    water_oz: num($("fWater").value)
+    quantity: qty,
+    servings: sv,
+    calories: m($("fCalories").value),
+    total_fat_g: m($("fFat").value),
+    saturated_fat_g: m($("fSatFat").value),
+    protein_g: m($("fProtein").value),
+    sodium_mg: m($("fSodium").value),
+    carbs_g: m($("fCarbs").value),
+    fiber_g: m($("fFiber").value),
+    total_sugar_g: m($("fSugar").value),
+    natural_sugar_g: m($("fNatSugar").value),
+    added_sugar_g: m($("fAddSugar").value),
+    caffeine_mg: m($("fCaffeine").value),
+    alcohol_g: m($("fAlcohol").value),
+    water_oz: m($("fWater").value)
   };
 }
 function clearEntryForm() {
   $("editId").value = "";
   $("fLib").selectedIndex = 0;
   ["fName","fQty"].forEach(function (id) { $(id).value = ""; });
+  $("fServings").value = "1";
   ["fCalories","fFat","fSatFat","fProtein","fFiber","fSodium","fCarbs","fSugar","fNatSugar","fAddSugar",
    "fCaffeine","fAlcohol","fWater"].forEach(function (id) { $(id).value = "0"; });
-  setEntryType("food");
   $("entryFormTitle").textContent = "Add entry";
   $("entrySubmit").textContent = "Add entry";
   $("entryCancel").style.display = "none";
@@ -528,6 +569,7 @@ $("entryForm").addEventListener("submit", function (ev) {
   }
   persistEntries();
   clearEntryForm();
+  setEntryOpen(false);
   renderAll();
 });
 function startEdit(id) {
@@ -550,11 +592,12 @@ function startEdit(id) {
   $("fCaffeine").value = e.caffeine_mg || 0;
   $("fAlcohol").value = e.alcohol_g || 0;
   $("fWater").value = e.water_oz || 0;
-  setEntryType(e.entry_type === "beverage" ? "beverage" : "food");
+  $("fServings").value = "1";
   $("entryFormTitle").textContent = "Edit entry";
   $("entrySubmit").textContent = "Save changes";
   $("entryCancel").style.display = "block";
-  $("entryFormTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+  setEntryOpen(true);
+  $("entryCard").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function deleteEntry(id) {
   var e = null;
@@ -563,10 +606,10 @@ function deleteEntry(id) {
   if (!confirm('Delete "' + e.name + '"?')) return;
   entries = entries.filter(function (x) { return x.id !== id; });
   persistEntries();
-  if ($("editId").value === id) clearEntryForm();
+  if ($("editId").value === id) { clearEntryForm(); setEntryOpen(false); }
   renderAll();
 }
-$("entryCancel").addEventListener("click", clearEntryForm);
+$("entryCancel").addEventListener("click", function () { clearEntryForm(); setEntryOpen(false); });
 
 /* ===== saved-item recall: pick a previously logged item to autofill ===== */
 function savedItemMap() {
@@ -594,7 +637,7 @@ function autofillFromSaved(name) {
   if (!key) return;
   var src = savedItemMap()[key];
   if (!src) return;
-  setEntryType(src.entry_type === "beverage" ? "beverage" : "food");
+  $("fServings").value = "1";
   $("fQty").value = src.quantity || "";
   $("fCalories").value = src.calories || 0;
   $("fFat").value = src.total_fat_g || 0;
@@ -614,20 +657,9 @@ $("fName").addEventListener("input", function () { autofillFromSaved($("fName").
 $("fName").addEventListener("change", function () { autofillFromSaved($("fName").value); });
 
 /* ===== food library ===== */
-var foodType = "food";
-function setFoodType(t) {
-  foodType = t;
-  Array.prototype.forEach.call($("foodTypeSeg").querySelectorAll("button"), function (b) {
-    b.classList.toggle("on", b.getAttribute("data-type") === t);
-  });
-  $("gBevFields").style.display = (t === "beverage") ? "block" : "none";
-}
-Array.prototype.forEach.call($("foodTypeSeg").querySelectorAll("button"), function (b) {
-  b.addEventListener("click", function () { setFoodType(b.getAttribute("data-type")); });
-});
 function readFoodForm() {
   return {
-    entry_type: foodType,
+    entry_type: "food",
     name: $("foodName").value.trim(),
     quantity: $("foodQty").value.trim(),
     calories: num($("gCalories").value),
@@ -650,7 +682,6 @@ function clearFoodForm() {
   ["foodName", "foodQty"].forEach(function (id) { $(id).value = ""; });
   ["gCalories", "gFat", "gSatFat", "gProtein", "gFiber", "gSodium", "gCarbs", "gSugar", "gNatSugar", "gAddSugar",
    "gCaffeine", "gAlcohol", "gWater"].forEach(function (id) { $(id).value = "0"; });
-  setFoodType("food");
   $("foodFormTitle").textContent = "Add food";
   $("foodSubmit").textContent = "Add food";
   $("foodCancel").style.display = "none";
@@ -699,7 +730,6 @@ function foodStartEdit(id) {
   $("gCaffeine").value = f.caffeine_mg || 0;
   $("gAlcohol").value = f.alcohol_g || 0;
   $("gWater").value = f.water_oz || 0;
-  setFoodType(f.entry_type === "beverage" ? "beverage" : "food");
   $("foodFormTitle").textContent = "Edit food";
   $("foodSubmit").textContent = "Save changes";
   $("foodCancel").style.display = "block";
@@ -727,9 +757,7 @@ function renderFoodLib() {
   } else {
     items.forEach(function (f) {
       html += '<div class="entry">' +
-        '<div><div class="nm">' + esc(f.name) +
-        '<span class="badge' + (f.entry_type === "beverage" ? " bev" : "") + '">' +
-        (f.entry_type === "beverage" ? "drink" : "food") + "</span></div>" +
+        '<div><div class="nm">' + esc(f.name) + "</div>" +
         (f.quantity ? '<div class="qt">' + esc(f.quantity) + "</div>" : "") +
         '<div class="mac">' + esc(entryMacros(f)) + "</div></div>" +
         '<div class="acts">' +
@@ -767,7 +795,7 @@ function autofillFromLibrary(id) {
   for (var i = 0; i < foodLib.length; i++) if (foodLib[i].id === id) f = foodLib[i];
   if (!f) return;
   // Explicit selection always fills, even while editing an existing entry.
-  setEntryType(f.entry_type === "beverage" ? "beverage" : "food");
+  $("fServings").value = "1";
   $("fName").value = f.name || "";
   $("fQty").value = f.quantity || "";
   $("fCalories").value = f.calories || 0;
@@ -791,7 +819,7 @@ $("addWaterBtn").addEventListener("click", function () {
   var oz = num($("waterOz").value);
   if (oz <= 0) { alert("Enter an amount greater than 0."); return; }
   entries.push({
-    id: uid(), log_date: selectedDate, entry_type: "beverage",
+    id: uid(), log_date: selectedDate, entry_type: "food",
     name: "Water", quantity: fmt(oz) + " oz",
     calories: 0, total_fat_g: 0, saturated_fat_g: 0, protein_g: 0, fiber_g: 0, sodium_mg: 0,
     carbs_g: 0, total_sugar_g: 0, natural_sugar_g: 0, added_sugar_g: 0,
@@ -803,12 +831,20 @@ $("addWaterBtn").addEventListener("click", function () {
 });
 /* ===== weigh-ins ===== */
 var wiUnit = "lb";
+function setWeighInOpen(open) {
+  $("weighInCard").classList.toggle("open", open);
+  $("weighInBody").style.display = open ? "block" : "none";
+}
+$("weighInHead").addEventListener("click", function () {
+  setWeighInOpen($("weighInBody").style.display === "none");
+});
 function weighInFor(dateStr) {
   for (var i = 0; i < weighIns.length; i++) if (weighIns[i].log_date === dateStr) return weighIns[i];
   return null;
 }
 function renderWeighIn() {
   var w = weighInFor(selectedDate);
+  $("weighInTitle").textContent = w ? "Weigh-in — " + fmt(w.weight) + " " + w.unit : "Weigh-in";
   var html = "";
   if (w) {
     html = '<div class="bigweight">' + fmt(w.weight) + " " + esc(w.unit) + "</div>" +
@@ -819,7 +855,7 @@ function renderWeighIn() {
   } else {
     html = '<div class="empty">No weigh-in logged for this day.</div><div id="wiFormWrap"></div>';
   }
-  $("weighInCard").innerHTML = html;
+  $("weighInBody").innerHTML = html;
   renderWeighInForm($("wiFormWrap"), w);
   var eb = $("wiEditBtn"), db = $("wiDelBtn");
   if (eb) eb.addEventListener("click", function () {
@@ -873,17 +909,18 @@ function renderWeighInForm(wrap, existing) {
 }
 
 /* ===== trend charts (inline SVG, no libraries) ===== */
-function windowWeighIns(days) {
+function weighInsInRange(from, to) {
   var out = [];
-  for (var i = days - 1; i >= 0; i--) {
-    var d = addDaysISO(selectedDate, -i);
-    var w = weighInFor(d);
-    if (w) out.push({ date: d, weight: w.weight, unit: w.unit });
-  }
+  weighIns.forEach(function (w) {
+    if (w.log_date >= from && w.log_date <= to) {
+      out.push({ date: w.log_date, weight: w.weight, unit: w.unit });
+    }
+  });
+  out.sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
   return out;
 }
-function renderTrend(days, chartId, statsId) {
-  var pts = windowWeighIns(days);
+function renderWeightTrend(from, to, chartId, statsId) {
+  var pts = weighInsInRange(from, to);
   var cEl = $(chartId), sEl = $(statsId);
   if (pts.length < 2) {
     cEl.innerHTML = '<div class="empty">Log at least 2 weigh-ins in this period to see a trend.</div>';
@@ -935,6 +972,109 @@ function renderTrend(days, chartId, statsId) {
 }
 function stat(label, value) {
   return '<div class="stat"><div class="v">' + value + '</div><div class="l">' + label + "</div></div>";
+}
+
+/* ===== food trends ===== */
+var FOOD_TREND_FIELDS = [
+  ["calories", "Calories", "kcal"],
+  ["carbs_g", "Carbs", "g"],
+  ["total_sugar_g", "Sugar", "g"],
+  ["total_fat_g", "Fat", "g"],
+  ["water_oz", "Water", "oz"]
+];
+function dayCountISO(from, to) {
+  return Math.round((parseISO(to) - parseISO(from)) / 86400000) + 1;
+}
+function renderFoodTrend(from, to, chartId, statsId) {
+  var days = dayCountISO(from, to);
+  var cEl = $(chartId), sEl = $(statsId);
+  if (days < 1) {
+    cEl.innerHTML = '<div class="empty">Invalid date range.</div>';
+    sEl.innerHTML = "";
+    return;
+  }
+  var totals = {};
+  FOOD_TREND_FIELDS.forEach(function (f) { totals[f[0]] = 0; });
+  var perDay = [];
+  var entryCount = 0;
+  for (var i = 0; i < days; i++) {
+    var d = addDaysISO(from, i);
+    var dayCal = 0;
+    entries.forEach(function (e) {
+      if (e.log_date !== d) return;
+      entryCount++;
+      FOOD_TREND_FIELDS.forEach(function (f) { totals[f[0]] += num(e[f[0]]); });
+      dayCal += num(e.calories);
+    });
+    perDay.push({ date: d, calories: dayCal });
+  }
+  if (!entryCount) {
+    cEl.innerHTML = '<div class="empty">No entries in this period.</div>';
+    sEl.innerHTML = "";
+    return;
+  }
+  var max = 0;
+  perDay.forEach(function (p) { if (p.calories > max) max = p.calories; });
+  var W = 320, H = 170, PL = 34, PR = 10, PT = 12, PB = 24;
+  var base = H - PB;
+  var iw = (W - PL - PR) / perDay.length;
+  var bars = "";
+  perDay.forEach(function (p, i2) {
+    var bh = max > 0 ? (p.calories / max) * (H - PT - PB) : 0;
+    var x = PL + i2 * iw + iw * 0.15;
+    var y = base - bh;
+    bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' +
+      (iw * 0.7).toFixed(1) + '" height="' + bh.toFixed(1) + '" fill="#2e7d4f">' +
+      "<title>" + esc(p.date) + ": " + fmt(p.calories) + " kcal</title></rect>";
+  });
+  var firstD = parseISO(perDay[0].date), lastD = parseISO(perDay[perDay.length - 1].date);
+  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var svg =
+    '<svg class="chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Daily calories trend">' +
+    '<line x1="' + PL + '" y1="' + PT + '" x2="' + (W - PR) + '" y2="' + PT +
+    '" stroke="#e2e7ed" stroke-dasharray="4 3"/>' +
+    '<line x1="' + PL + '" y1="' + base + '" x2="' + (W - PR) + '" y2="' + base +
+    '" stroke="#e2e7ed"/>' +
+    '<text x="4" y="' + (PT + 4) + '" font-size="10" fill="#68737f">' + fmt(max) + "</text>" +
+    bars +
+    '<text x="' + PL + '" y="' + (H - 8) + '" font-size="10" fill="#68737f">' +
+    months[firstD.getMonth()] + " " + firstD.getDate() + "</text>" +
+    '<text x="' + (W - PR) + '" y="' + (H - 8) + '" font-size="10" fill="#68737f" text-anchor="end">' +
+    months[lastD.getMonth()] + " " + lastD.getDate() + "</text>" +
+    "</svg>";
+  cEl.innerHTML = svg;
+  var sh = "";
+  FOOD_TREND_FIELDS.forEach(function (f) {
+    sh += stat(f[1] + " / day", fmt(totals[f[0]] / days) + " " + f[2]);
+  });
+  sEl.innerHTML = sh;
+}
+
+/* ===== trends tab ===== */
+var wRange = null;
+var fRange = null;
+$("wRangeBtn").addEventListener("click", function () {
+  var f = $("wFrom").value, t = $("wTo").value;
+  if (!f || !t) { alert("Pick both a From and a To date."); return; }
+  if (f > t) { alert("The From date must be on or before the To date."); return; }
+  wRange = { from: f, to: t };
+  renderWeightTrend(f, t, "chartWRange", "statsWRange");
+});
+$("fRangeBtn").addEventListener("click", function () {
+  var f = $("fFrom").value, t = $("fTo").value;
+  if (!f || !t) { alert("Pick both a From and a To date."); return; }
+  if (f > t) { alert("The From date must be on or before the To date."); return; }
+  fRange = { from: f, to: t };
+  renderFoodTrend(f, t, "chartFRange", "statsFRange");
+});
+function renderTrends() {
+  var t = todayStr();
+  renderWeightTrend(addDaysISO(t, -6), t, "chart7", "stats7");
+  renderWeightTrend(addDaysISO(t, -29), t, "chart30", "stats30");
+  if (wRange) renderWeightTrend(wRange.from, wRange.to, "chartWRange", "statsWRange");
+  renderFoodTrend(addDaysISO(t, -6), t, "chartF7", "statsF7");
+  renderFoodTrend(addDaysISO(t, -29), t, "chartF30", "statsF30");
+  if (fRange) renderFoodTrend(fRange.from, fRange.to, "chartFRange", "statsFRange");
 }
 
 /* ===== export / import ===== */
@@ -1045,8 +1185,7 @@ function renderAll() {
   renderFoodLib();
   refreshLibraryDropdown();
   renderWeighIn();
-  renderTrend(7, "chart7", "stats7");
-  renderTrend(30, "chart30", "stats30");
+  if ($("pane-trends").classList.contains("active")) renderTrends();
   refreshSavedItems();
 }
 clearEntryForm();
